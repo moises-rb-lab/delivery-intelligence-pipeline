@@ -1,0 +1,39 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Variáveis de ambiente
+.env
+
+# Dados brutos (não versionar dados sensíveis)
+data/raw/*.csv
+data/raw/*.xlsx
+data/raw/*.parquet
+
+# Ambiente R
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+.Rprofile
+*.Rhistory
+*.RData
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp

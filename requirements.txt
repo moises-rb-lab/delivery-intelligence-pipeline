@@ -1,0 +1,21 @@
+# Banco de dados
+supabase==2.10.0
+
+# Manipulação de dados
+pandas==2.2.2
+numpy==1.26.4
+openpyxl==3.1.2          # leitura de Excel
+
+# Pipeline
+python-dotenv==1.0.1
+
+# App Streamlit
+streamlit==1.35.0
+plotly==5.22.0
+watchdog==4.0.1           # reload automático no dev
+
+# Integração R ↔ Python (opcional, usar quando necessário)
+rpy2==3.5.16
+
+# Utilitários
+loguru==0.7.2             # logs legíveis
