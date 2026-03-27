@@ -1,0 +1,2 @@
+Order Id,order date (DateOrders),shipping date (DateOrders),Days for shipment (scheduled),Days for shipping (real),Delivery Status,Late_delivery_risk,Order Region,Order Country,Category Name
+12345,1/31/2018 22:56,2/3/2018 22:56,4,6,Late delivery,1,OCEANIA,Australia,Electronics
