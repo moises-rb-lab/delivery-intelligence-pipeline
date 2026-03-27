@@ -1,64 +1,53 @@
-# 🚚 delivery-intelligence-pipeline
+# ⚡ ProcessSigma — Delivery Intelligence Pipeline
 
-Pipeline de inteligência de dados para análise de qualidade em logística de entregas,
-aplicando metodologia Six Sigma com arquitetura Medalhão (Bronze → Silver → Gold).
+> **Business Case Black Belt** — Inteligência Operacional aplicada à cadeia de suprimentos  
+> Unindo Lean Six Sigma · Engenharia de Dados · Process Mining
 
 ---
 
 ## 🎯 Objetivo
 
-Monitorar em tempo real os indicadores de desempenho logístico — atrasos, avarias e devoluções —
-permitindo ingestão contínua de dados e atualização automática dos dashboards.
+Transformar dados brutos de uma cadeia de suprimentos em decisões estratégicas que reduzam a variabilidade e aumentem a lucratividade — entregando um pipeline completo de inteligência de dados com monitoramento em tempo real.
 
 ---
 
-## 🗂️ Arquitetura do Projeto
+## 🔍 Cenário de Ataque (O Problema Real)
+
+O projeto foca na otimização do fluxo **Order-to-Shipping** utilizando o dataset DataCo Smart Supply Chain. As dores identificadas:
+
+| Problema | Impacto |
+|----------|---------|
+| Instabilidade no Lead Time | Alta variabilidade entre envio agendado e realizado |
+| Risco de Atraso (Late Delivery) | Comprometimento do SLA e satisfação do cliente |
+| Baixo Nível Sigma | DPMO elevado indicando necessidade de melhoria contínua |
+
+---
+
+## 🏗️ Arquitetura
 
 ```
-delivery-intelligence-pipeline/
-│
-├── data/                        # Camadas Medalhão
-│   ├── raw/                     # Dados brutos originais (não tocar)
-│   ├── bronze/                  # Ingestão bruta no banco (1:1 com raw)
-│   ├── silver/                  # Dados limpos e padronizados
-│   └── gold/                    # Indicadores prontos para consumo
-│
-├── ingestion/                   # Scripts de ingestão de dados
-│   ├── upload_csv.py            # Upload via arquivo CSV/Excel
-│   └── form_ingest.py           # Ingestão via formulário Streamlit
-│
-├── pipeline/                    # Transformações Bronze → Silver → Gold
-│   ├── bronze_to_silver.py      # Limpeza e padronização
-│   ├── silver_to_gold.py        # Cálculo de indicadores Six Sigma
-│   └── scheduler.py             # Agendamento e trigger de pipeline
-│
-├── analysis/
-│   └── r/                       # Análises estatísticas em R
-│       ├── eda.R                # Análise Exploratória de Dados
-│       ├── hypothesis_tests.R   # Testes de hipótese (t-test, ANOVA)
-│       ├── control_charts.R     # Cartas de Controle (CEP)
-│       └── sigma_level.R        # Cálculo do Nível Sigma / DPMO
-│
-├── app/
-│   └── streamlit/               # Aplicação web interativa
-│       ├── main.py              # Entry point do app
-│       ├── pages/               # Páginas do dashboard
-│       └── components/          # Componentes reutilizáveis
-│
-├── powerbi/
-│   └── docs/                    # Documentação do modelo Power BI
-│       ├── model_schema.md      # Esquema do modelo de dados
-│       └── narrative_guide.md   # Guia da narrativa do dashboard
-│
-├── docs/                        # Documentação geral
-│   ├── architecture.md          # Decisões arquiteturais
-│   ├── supabase_setup.md        # Configuração do Supabase
-│   └── data_dictionary.md       # Dicionário de dados
-│
-├── .env.example                 # Variáveis de ambiente (template)
-├── .gitignore                   # Arquivos ignorados pelo Git
-├── requirements.txt             # Dependências Python
-└── README.md                    # Este arquivo
+[Ingestão de Dados]
+    CSV/Excel Upload ──┐
+    Formulário Web  ───┴──► Supabase (PostgreSQL)
+                                    │
+                        ┌───────────┴───────────┐
+                        ▼                       ▼
+                  🥉 Bronze               Pipeline ETL
+                  (dados brutos)               │
+                        │               ┌──────┴──────┐
+                        ▼               ▼             ▼
+                  🥈 Silver          🔬 R          🔍 PM4Py
+                  (dados limpos)   Estatística   Process Mining
+                        │               │             │
+                        ▼               └──────┬──────┘
+                  🥇 Gold                      │
+                  (indicadores)         Evidências &
+                        │               Análise Causa Raiz
+              ┌─────────┴─────────┐
+              ▼                   ▼
+        [Streamlit]          [Power BI]
+      App interativo        Painel executivo
+      (tempo real)          (stakeholders)
 ```
 
 ---
@@ -68,89 +57,162 @@ delivery-intelligence-pipeline/
 | Camada | Tecnologia | Função |
 |--------|-----------|--------|
 | Banco de dados | Supabase (PostgreSQL) | Armazenamento + Realtime |
+| ETL / Pipeline | Python + pandas | Transformações Medalhão |
 | Análise estatística | R + tidyverse + ggplot2 | EDA, testes, cartas de controle |
-| Pipeline / ETL | Python + pandas | Transformações Medalhão |
+| Process Mining | PM4Py + GraphViz | Mapeamento de processos críticos |
 | App interativo | Streamlit | Dashboard público com ingestão |
 | Painel executivo | Power BI | Relatório para stakeholders |
 
 ---
 
+## 🗂️ Estrutura do Projeto
+
+```
+processsigma-delivery-intelligence/
+│
+├── data/
+│   ├── raw/                         # Dataset original (não versionado)
+│   ├── bronze/                      # Camada Bronze
+│   ├── silver/                      # Camada Silver
+│   └── gold/                        # Camada Gold
+│
+├── ingestion/
+│   ├── upload_csv.py                # Ingestão via CSV/Excel
+│   └── form_ingest.py               # Ingestão via formulário
+│
+├── pipeline/
+│   ├── bronze_to_silver.py          # Limpeza e padronização
+│   └── silver_to_gold.py            # Indicadores + Process Mining
+│
+├── analysis/
+│   ├── r/                           # Análises estatísticas em R
+│   │   ├── eda.R                    # Análise Exploratória
+│   │   ├── control_charts.R         # Cartas de Controle (CEP)
+│   │   ├── hypothesis_tests.R       # Testes de hipótese
+│   │   └── sigma_level.R            # Nível Sigma / DPMO
+│   └── process_mining/              # Outputs do Process Mining
+│       ├── process_events_delay_analysis.csv
+│       ├── process_events_delay_analysis.json
+│       ├── process_map_delay_analysis.png
+│       └── process_mining_debug.py
+│
+├── app/
+│   └── streamlit/
+│       ├── main.py                  # Entry point
+│       ├── db.py                    # Conexão Supabase
+│       └── pages/
+│           ├── visao_geral.py       # KPIs principais
+│           ├── otd_regiao.py        # OTD por região
+│           ├── sigma_dpmo.py        # Sigma e DPMO
+│           ├── process_mining.py    # Mapa de processos
+│           └── injecao_dados.py     # Upload + formulário
+│
+├── powerbi/
+│   └── docs/
+│       ├── model_schema.md          # Esquema do modelo
+│       └── narrative_guide.md       # Guia da narrativa
+│
+├── docs/
+│   ├── architecture.md              # Decisões arquiteturais
+│   ├── supabase_setup.md            # Configuração Supabase
+│   ├── data_dictionary.md           # Dicionário de dados
+│   └── PROCESS_MINING_GUIDE.md      # Guia Process Mining
+│
+├── .env.example
+├── .gitignore
+├── requirements.txt
+└── README.md
+```
+
+---
+
 ## 📊 Dataset
 
-**DataCo Smart Supply Chain**
-- Fonte: Kaggle
-- Registros: ~180.000
-- Colunas principais: `Days_for_shipping_real`, `Days_for_shipment_scheduled`,
-  `Late_delivery_risk`, `Delivery_Status`, `Order_Region`
+**DataCo Smart Supply Chain** — Kaggle  
+180.519 registros brutos → 65.752 pedidos únicos processados
 
 ---
 
-## 📈 Indicadores Six Sigma monitorados
+## 📈 Indicadores Monitorados
 
-- **OTD** — On-Time Delivery (% de entregas no prazo)
-- **DPMO** — Defeitos Por Milhão de Oportunidades
-- **Sigma Level** — Nível Sigma do processo
-- **Taxa de Avarias** — % de pedidos com avaria registrada
-- **Taxa de Devolução** — % de pedidos devolvidos por região
+| Indicador | Descrição | Meta |
+|-----------|-----------|------|
+| **OTD %** | On-Time Delivery | ≥ 95% |
+| **DPMO** | Defeitos Por Milhão de Oportunidades | ≤ 6.210 (4σ) |
+| **Sigma Level** | Nível Sigma do processo | ≥ 4σ |
+| **Lead Time** | Variabilidade do tempo de entrega | Estável (CEP) |
 
 ---
 
-## 🚀 Como executar
+## 🎓 Evidências para Certificação Black Belt
+
+```
+✅ Event log estruturado (CSV/JSON)      → analysis/process_mining/
+✅ Mapa de processo visual (PNG)         → analysis/process_mining/
+✅ Cartas de Controle (CEP)              → analysis/r/
+✅ Testes de hipótese documentados       → analysis/r/
+✅ Pipeline de dados reproduzível        → pipeline/
+✅ Dashboard interativo publicado        → Streamlit Cloud
+✅ Painel executivo                      → Power BI Service
+```
+
+---
+
+## 🚀 Como Executar
 
 ```bash
 # 1. Clone o repositório
-git clone https://github.com/seu-usuario/delivery-intelligence-pipeline.git
-cd delivery-intelligence-pipeline
+git clone https://github.com/seu-usuario/processsigma-delivery-intelligence.git
+cd processsigma-delivery-intelligence
 
-# 2. Crie o ambiente virtual Python
+# 2. Ambiente virtual Python
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate     # Windows
+.venv\Scripts\activate       # Windows
+source .venv/bin/activate    # Linux/Mac
 
-# 3. Instale as dependências
+# 3. Dependências
 pip install -r requirements.txt
 
-# 4. Configure as variáveis de ambiente
+# 4. Variáveis de ambiente
 cp .env.example .env
-# Edite o .env com suas credenciais do Supabase
+# Preencha SUPABASE_URL e SUPABASE_KEY
 
-# 5. Execute o app Streamlit
+# 5. Executar pipeline completo
+python ingestion/upload_csv.py
+python pipeline/bronze_to_silver.py
+python pipeline/silver_to_gold.py
+
+# 6. App Streamlit
 streamlit run app/streamlit/main.py
 ```
 
 ---
 
-## 📁 Ambientes R
-
-Este projeto usa `renv` para isolar as dependências R.
+## 📁 Ambiente R
 
 ```r
-# Restaurar ambiente R
+# Restaurar dependências R
 renv::restore()
+
+# Executar análises
+source("analysis/r/eda.R")
+source("analysis/r/control_charts.R")
 ```
-
----
-
-## 🔐 Variáveis de Ambiente
-
-Copie `.env.example` para `.env` e preencha:
-
-```
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_KEY=your-anon-key
-```
-
-> ⚠️ Nunca suba o `.env` para o repositório.
 
 ---
 
 ## 📌 Status do Projeto
 
-| Fase | Status |
-|------|--------|
-| Estrutura do repositório | ✅ Concluído |
-| Modelagem do banco (Supabase) | 🔄 Em andamento |
-| Pipeline Bronze → Silver → Gold | ⏳ Aguardando |
-| Análise estatística em R | ⏳ Aguardando |
-| App Streamlit | ⏳ Aguardando |
+| Entrega | Status |
+|---------|--------|
+| Arquitetura Medalhão (Supabase) | ✅ Concluído |
+| Pipeline Bronze → Silver → Gold | ✅ Concluído |
+| Process Mining (PM4Py) | ✅ Concluído |
+| App Streamlit (4 páginas) | ✅ Concluído |
+| Análise Estatística em R | 🔄 Em andamento |
 | Dashboard Power BI | ⏳ Aguardando |
+| Deploy Streamlit Cloud | ⏳ Aguardando |
+
+---
+
+*ProcessSigma — Where Data Meets Process Excellence*

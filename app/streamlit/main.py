@@ -15,7 +15,8 @@ pagina = st.sidebar.radio(
         "📊 Visão Geral",
         "🗺️ OTD por Região",
         "📈 Sigma e DPMO",
-        "📥 Injeção de Dados"
+        "📥 Injeção de Dados",
+        "🔍 Process Mining"
     ]
 )
 
@@ -34,3 +35,6 @@ elif pagina == "📈 Sigma e DPMO":
 elif pagina == "📥 Injeção de Dados":
     from pages import injecao_dados
     injecao_dados.render()
+elif pagina == "🔍 Process Mining":
+    from pages import process_mining
+    process_mining.render()

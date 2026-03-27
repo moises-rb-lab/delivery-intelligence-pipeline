@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 from loguru import logger
 import math
 import os
+import pm4py
+from pm4py.objects.log.util import dataframe_utils
+from pm4py.algo.discovery.heuristics import algorithm as heuristics
+from datetime import timedelta
+import json
 
 load_dotenv()
 
@@ -51,18 +56,29 @@ def gerar_gold_otd(df: pd.DataFrame):
     logger.info("Calculando Gold OTD...")
 
     resultado = []
+    periodos = set()
+    
     for (period, region), grupo in df.groupby(["period", "order_region"]):
         total    = len(grupo)
         on_time  = int((grupo["is_late"] == False).sum())
         otd_pct  = round(on_time / total * 100, 2) if total > 0 else 0.0
+        period_str = period.strftime("%Y-%m-%d")
+        periodos.add(period_str)
         resultado.append({
-            "period"          : period.strftime("%Y-%m-%d"),
+            "period"          : period_str,
             "region"          : str(region),
             "total_deliveries": int(total),
             "on_time"         : on_time,
             "otd_pct"         : float(otd_pct)
         })
 
+    # Upsert: deletar registros existentes para os períodos antes de inserir
+    for periodo in periodos:
+        supabase.table("gold_otd") \
+            .delete() \
+            .eq("period", periodo) \
+            .execute()
+    
     supabase.table("gold_otd").insert(resultado).execute()
     logger.success(f"✅ Gold OTD — {len(resultado)} registros inseridos")
 
@@ -99,11 +115,131 @@ def gerar_gold_sigma(df: pd.DataFrame):
     gold["period"] = gold["period"].dt.strftime("%Y-%m-%d")
 
     registros = gold.to_dict(orient="records")
+    
+    # Upsert: deletar registros existentes para os períodos antes de inserir
+    periodos = [r["period"] for r in registros]
+    for periodo in periodos:
+        supabase.table("gold_sigma") \
+            .delete() \
+            .eq("period", periodo) \
+            .execute()
+    
     supabase.table("gold_sigma").insert(registros).execute()
     logger.success(f"✅ Gold Sigma — {len(registros)} registros inseridos")
+
+def gerar_evidencia_process_mining(df: pd.DataFrame):
+    """Gera mapa de processo para casos críticos (atrasos) usando pm4py."""
+    try:
+        logger.info("Gerando evidência Process Mining para análise de atrasos...")
+        
+        # Filtrar apenas casos críticos (is_late == True)
+        df_criticos = df[df["is_late"] == True].copy()
+        
+        if df_criticos.empty:
+            logger.warning("⚠️ Nenhum caso crítico encontrado para Process Mining.")
+            return
+        
+        logger.info(f"Casos críticos encontrados: {len(df_criticos)}")
+        
+        # Construir event log "empilhado" com dois eventos por caso
+        eventos = []
+        for idx, row in df_criticos.iterrows():
+            case_id = row.get("id") or str(idx)
+            
+            # Evento 1: "Pedido Registrado"
+            eventos.append({
+                "case:concept:name": case_id,
+                "concept:name": "Pedido Registrado",
+                "time:timestamp": row["order_date"],
+                "region": row.get("order_region", "Unknown"),
+                "status": "registered"
+            })
+            
+            # Evento 2: "Envio Concluído" (calculado com days_real)
+            dias_real = row.get("days_real", 0)
+            data_envio = row["order_date"] + timedelta(days=dias_real)
+            eventos.append({
+                "case:concept:name": case_id,
+                "concept:name": "Envio Concluído",
+                "time:timestamp": data_envio,
+                "region": row.get("order_region", "Unknown"),
+                "status": "delivered"
+            })
+        
+        # Criar DataFrame com o event log
+        log_df = pd.DataFrame(eventos)
+        log_df = log_df.sort_values(["case:concept:name", "time:timestamp"]).reset_index(drop=True)
+        
+        logger.info(f"Event log criado com {len(log_df)} eventos")
+        
+        # Criar diretório se não existir
+        output_dir = "analysis"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+            logger.info(f"Diretório criado: {output_dir}")
+        
+        # Salvar como CSV
+        csv_path = os.path.join(output_dir, "process_events_delay_analysis.csv")
+        log_df_export = log_df.copy()
+        log_df_export["time:timestamp"] = log_df_export["time:timestamp"].astype(str)
+        log_df_export.to_csv(csv_path, index=False)
+        logger.success(f"✅ Event Log CSV — salvo em {csv_path}")
+        
+        # Salvar como JSON
+        json_path = os.path.join(output_dir, "process_events_delay_analysis.json")
+        log_df_export.to_json(json_path, orient="records", indent=2)
+        logger.success(f"✅ Event Log JSON — salvo em {json_path}")
+        
+        # Tentar gerar visualização PNG com GraphViz
+        try:
+            logger.info("Tentando gerar visualização PNG com GraphViz...")
+            log_df["time:timestamp"] = pd.to_datetime(log_df["time:timestamp"])
+            event_log = dataframe_utils.convert_timestamp_columns_in_df(log_df)
+            
+            logger.info("Descobrindo heuristics net (pode levar alguns minutos)...")
+            heur_net = pm4py.discover_heuristics_net(event_log)
+            
+            png_path = os.path.join(output_dir, "process_map_delay_analysis.png")
+            logger.info(f"Salvando mapa de processo em {png_path}...")
+            pm4py.vis.save_vis_heuristics_net(heur_net, png_path)
+            logger.success(f"✅ Mapa de Processo PNG — salvo em {png_path}")
+            
+        except Exception as viz_error:
+            logger.warning(f"⚠️ Não foi possível gerar PNG: {type(viz_error).__name__}")
+            logger.warning("   Motivo: GraphViz não está instalado ou não está no PATH")
+            logger.info("   ℹ️  Event logs foram salvos em CSV e JSON para análise")
+            logger.info("")
+            logger.info("   Para instalar GraphViz e gerar visualizações:")
+            logger.info("   📦 Windows: Download em https://graphviz.org/download/")
+            logger.info("      Ou use: choco install graphviz (com Chocolatey)")
+            logger.info("   📦 Linux: sudo apt-get install graphviz")
+            logger.info("   📦 Mac: brew install graphviz")
+        
+        # Estatísticas do processo
+        stats = {
+            "total_casos": log_df["case:concept:name"].nunique(),
+            "total_eventos": len(log_df),
+            "atividades": sorted(log_df["concept:name"].unique().tolist()),
+            "regioes": sorted(log_df["region"].unique().tolist()),
+            "eventos_por_caso": len(log_df) // log_df["case:concept:name"].nunique()
+        }
+        
+        logger.info("📊 Estatísticas do Processo de Atrasos:")
+        logger.info(f"   • Total de casos críticos: {stats['total_casos']}")
+        logger.info(f"   • Total de eventos: {stats['total_eventos']}")
+        logger.info(f"   • Atividades: {', '.join(stats['atividades'])}")
+        logger.info(f"   • Regiões afetadas: {', '.join(stats['regioes'])}")
+        logger.info(f"   • Eventos por caso: {stats['eventos_por_caso']}")
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao gerar Process Mining: {str(e)}")
+        logger.error(f"Tipo de erro: {type(e).__name__}")
+        import traceback
+        logger.error(traceback.format_exc())
 
 if __name__ == "__main__":
     df = buscar_silver()
     gerar_gold_otd(df)
     gerar_gold_sigma(df)
-    logger.success("🏆 Pipeline completo — Bronze → Silver → Gold")
+    gerar_evidencia_process_mining(df)
+    logger.success("🏆 Pipeline completo — Bronze → Silver → Gold + Process Mining")

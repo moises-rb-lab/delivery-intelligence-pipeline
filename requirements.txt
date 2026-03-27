@@ -9,6 +9,9 @@ openpyxl==3.1.2          # leitura de Excel
 # Pipeline
 python-dotenv==1.0.1
 
+# Process Mining
+pm4py==2.7.11.4           # descoberta de processos e análise
+
 # App Streamlit
 streamlit==1.35.0
 plotly==5.22.0
@@ -19,3 +22,6 @@ rpy2==3.5.16
 
 # Utilitários
 loguru==0.7.2             # logs legíveis
+
+# Utilitários para gráficos e imagens
+Pillow==10.3.0          # manipulação de imagens (ex: gráficos)

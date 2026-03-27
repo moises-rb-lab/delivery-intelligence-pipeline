@@ -1,9 +1,8 @@
-# Arquitetura — delivery-intelligence-pipeline
+# Arquitetura — ProcessSigma Delivery Intelligence
 
 ## Visão Geral
 
-Este projeto implementa uma arquitetura Medalhão (Medallion Architecture)
-para processamento de dados logísticos com atualização em tempo real.
+Pipeline de inteligência operacional que combina **Lean Six Sigma**, **Engenharia de Dados** e **Process Mining** para análise e melhoria contínua de processos logísticos.
 
 ---
 
@@ -16,21 +15,21 @@ para processamento de dados logísticos com atualização em tempo real.
 - Objetivo: preservar o dado original, sempre rastreável
 
 ### 🥈 Silver — Limpeza e padronização
-- Remoção de nulos e duplicatas
-- Padronização de tipos (datas, categorias, numéricos)
+- Remoção de nulos e duplicatas por `order_id`
 - Cálculo do campo `delay_days` (real - planejado)
 - Flag `is_late` (boolean)
+- Padronização de regiões e status
 - Tabela: `silver_deliveries`
 
 ### 🥇 Gold — Indicadores prontos
-- Agregações por região, período e transportadora
-- Cálculo de OTD, DPMO e Nível Sigma
-- Tabelas: `gold_otd`, `gold_sigma`, `gold_region_summary`
-- Consumido diretamente pelo Streamlit e Power BI
+- OTD por região e período
+- DPMO e Nível Sigma mensais
+- Consumido pelo Streamlit (Realtime) e Power BI
+- Tabelas: `gold_otd`, `gold_sigma`
 
 ---
 
-## Fluxo de dados
+## Fluxo Completo de Dados
 
 ```
 [Usuário]
@@ -38,33 +37,67 @@ para processamento de dados logísticos com atualização em tempo real.
     ├── Upload CSV/Excel ──────────────────┐
     └── Formulário Streamlit ──────────────┤
                                            ▼
-                              [Supabase — tabela bronze]
+                              [Supabase — bronze_deliveries]
                                            │
-                                    trigger / scheduler
-                                           │
-                                           ▼
-                              [Python — bronze_to_silver.py]
+                                    bronze_to_silver.py
                                            │
                                            ▼
-                              [Supabase — tabela silver]
+                              [Supabase — silver_deliveries]
                                            │
-                                    trigger / scheduler
-                                           │
-                                           ▼
-                              [Python — silver_to_gold.py]
-                                           │
-                                           ▼
-                              [Supabase — tabelas gold]
-                                           │
-                              ┌────────────┴────────────┐
-                              ▼                         ▼
-                       [Streamlit]               [Power BI]
-                    (app interativo)          (painel executivo)
-                              │
-                              ▼
-                    [R — análise estatística]
-                    EDA, testes, cartas de controle
+                         ┌─────────────────┴─────────────────┐
+                         ▼                                   ▼
+                silver_to_gold.py                     analysis/r/
+                         │                            eda.R
+                         │                            control_charts.R
+                ┌────────┴────────┐                   hypothesis_tests.R
+                ▼                 ▼                         │
+          gold_otd          gold_sigma                      ▼
+          gold_sigma              │                  Cartas de Controle
+                │                 └──► Process Mining      CEP / DPMO
+                │                      (PM4Py)
+                │                      event_log.csv
+                │                      process_map.png
+                │
+    ┌───────────┴───────────┐
+    ▼                       ▼
+[Streamlit]            [Power BI]
+Visão Geral            Modelo DAX
+OTD por Região         Narrativa
+Sigma e DPMO           Painel Executivo
+Process Mining
+Injeção de Dados
 ```
+
+---
+
+## Camada de Análise — R + Process Mining
+
+### R (análise estatística)
+Atua sobre os dados da camada Silver e Gold para validação estatística:
+
+| Script | Função |
+|--------|--------|
+| `eda.R` | Distribuições, correlações, outliers |
+| `control_charts.R` | Cartas XBar, p-chart — estabilidade do processo |
+| `hypothesis_tests.R` | Teste t, ANOVA — diferenças entre regiões/períodos |
+| `sigma_level.R` | Cálculo e validação do Nível Sigma |
+
+### Process Mining (PM4Py)
+Atua sobre os casos críticos da camada Silver (`is_late = True`):
+
+| Output | Formato | Uso |
+|--------|---------|-----|
+| Event log | CSV / JSON | Análise em ferramentas externas |
+| Heuristics Net | PNG | Evidência visual do fluxo desviante |
+| Estatísticas | Log terminal | Documentação do Business Case |
+
+---
+
+## Realtime — Como funciona
+
+O Supabase expõe um canal WebSocket por tabela.
+O Streamlit se inscreve nas tabelas `gold_otd` e `gold_sigma` e reage
+a cada INSERT/UPDATE atualizando os indicadores automaticamente.
 
 ---
 
@@ -72,22 +105,26 @@ para processamento de dados logísticos com atualização em tempo real.
 
 | Decisão | Escolha | Motivo |
 |---------|---------|--------|
-| Banco de dados | Supabase (PostgreSQL) | Gratuito, Realtime nativo, fácil integração Python |
-| Ingestão | CSV upload + formulário | Flexibilidade para dados históricos e novos registros |
-| Transformação | Python (pandas) | Familiaridade, ecossistema rico |
-| Análise estatística | R | Superior para EDA e testes Six Sigma |
+| Banco de dados | Supabase (PostgreSQL) | Gratuito, Realtime nativo |
+| ETL | Python (pandas) | Familiaridade, ecossistema rico |
+| Análise estatística | R | Superior para EDA e Six Sigma |
+| Process Mining | PM4Py + GraphViz | Padrão acadêmico e industrial |
 | Visualização interativa | Streamlit | Deploy simples, sem frontend |
-| Painel executivo | Power BI | Padrão de mercado para stakeholders |
+| Painel executivo | Power BI | Padrão de mercado corporativo |
 
 ---
 
-## Realtime — Como funciona
+## Evidências para Black Belt
 
-O Supabase expõe um canal WebSocket por tabela.
-O Streamlit se inscreve nesse canal e reage a cada INSERT/UPDATE na tabela gold,
-atualizando os indicadores automaticamente sem necessidade de refresh manual.
+O projeto gera automaticamente todas as evidências necessárias:
 
-```python
-# Exemplo conceitual
-supabase.table("gold_otd").on("INSERT", callback).subscribe()
+```
+analysis/
+├── r/
+│   ├── Cartas de Controle (CEP)
+│   ├── Testes de Hipótese
+│   └── Análise de Capability
+└── process_mining/
+    ├── Event Log (CSV/JSON)
+    └── Mapa de Processo (PNG)
 ```
