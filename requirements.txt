@@ -1,5 +1,5 @@
 # Banco de dados
-supabase==2.10.0
+supabase==2.15.0
 
 # Manipulação de dados
 pandas==2.2.2
