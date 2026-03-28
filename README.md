@@ -100,7 +100,7 @@ processsigma-delivery-intelligence/
 │   └── streamlit/
 │       ├── main.py                  # Entry point
 │       ├── db.py                    # Conexão Supabase
-│       └── pages/
+│       └── modules/
 │           ├── visao_geral.py       # KPIs principais
 │           ├── otd_regiao.py        # OTD por região
 │           ├── sigma_dpmo.py        # Sigma e DPMO
