@@ -54,6 +54,10 @@ def render():
             (df["period"].dt.date >= periodo_sel[0]) &
             (df["period"].dt.date <= periodo_sel[1])
         ]
+    
+    if df.empty or len(regioes_sel) == 0:
+        st.warning("⚠️ Selecione ao menos uma região para visualizar os dados.")
+        st.stop()
 
     st.markdown("---")
 

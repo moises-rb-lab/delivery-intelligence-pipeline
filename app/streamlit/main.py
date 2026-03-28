@@ -15,8 +15,8 @@ pagina = st.sidebar.radio(
         "📊 Visão Geral",
         "🗺️ OTD por Região",
         "📈 Sigma e DPMO",
-        "📥 Injeção de Dados",
-        "🔍 Process Mining"
+        "🔍 Process Mining",
+        "📥 Injeção de Dados"
     ]
 )
 
@@ -24,17 +24,17 @@ st.sidebar.markdown("---")
 st.sidebar.caption("delivery-intelligence-pipeline v1.0")
 
 if pagina == "📊 Visão Geral":
-    from pages import visao_geral
+    from modules import visao_geral
     visao_geral.render()
 elif pagina == "🗺️ OTD por Região":
-    from pages import otd_regiao
+    from modules import otd_regiao
     otd_regiao.render()
 elif pagina == "📈 Sigma e DPMO":
-    from pages import sigma_dpmo
+    from modules import sigma_dpmo
     sigma_dpmo.render()
-elif pagina == "📥 Injeção de Dados":
-    from pages import injecao_dados
-    injecao_dados.render()
 elif pagina == "🔍 Process Mining":
-    from pages import process_mining
+    from modules import process_mining
     process_mining.render()
+elif pagina == "📥 Injeção de Dados":
+    from modules import injecao_dados
+    injecao_dados.render()
