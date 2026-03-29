@@ -42,14 +42,15 @@ def buscar_silver() -> pd.DataFrame:
 
 def calcular_sigma(dpmo: float) -> float:
     """Converte DPMO em Nível Sigma aproximado."""
-    if dpmo <= 0:
-        return 6.0
-    if dpmo >= 1_000_000:
-        return 0.0
-    # Aproximação padrão Six Sigma
+    if dpmo <= 0:        return 6.0
+    if dpmo >= 999999:   return 0.5
+    if dpmo >= 500000:   return 1.5
+    if dpmo >= 308538:   return 2.0
+    if dpmo >= 66807:    return 3.0
+    if dpmo >= 6210:     return 4.0
+    if dpmo >= 233:      return 5.0
     x = 29.37 - 2.221 * math.log(dpmo)
-    if x <= 0:
-        return 0.0
+    if x <= 0: return 0.5
     return round(0.8406 + math.sqrt(x), 2)
 
 def gerar_gold_otd(df: pd.DataFrame):
